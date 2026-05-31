@@ -202,7 +202,6 @@ namespace VContainer.Unity
                 // ReSharper disable once PossibleNullReferenceException
                 Parent.Container.CreateScope(builder =>
                 {
-                    builder.RegisterBuildCallback(SetContainer);
                     builder.ApplicationOrigin = this;
                     builder.Diagnostics = VContainerSettings.DiagnosticsEnabled ? DiagnositcsContext.GetCollector(scopeName) : null;
                     InstallTo(builder);
@@ -215,7 +214,6 @@ namespace VContainer.Unity
                     ApplicationOrigin = this,
                     Diagnostics = VContainerSettings.DiagnosticsEnabled ? DiagnositcsContext.GetCollector(scopeName) : null,
                 };
-                builder.RegisterBuildCallback(SetContainer);
                 InstallTo(builder);
                 builder.Build();
             }
@@ -226,7 +224,6 @@ namespace VContainer.Unity
         void SetContainer(IObjectResolver container)
         {
             Container = container;
-            AutoInjectAll();
         }
 
         public TScope CreateChild<TScope>(IInstaller installer = null, string childScopeName = null)
@@ -287,8 +284,8 @@ namespace VContainer.Unity
 
         void InstallTo(IContainerBuilder builder)
         {
+            builder.RegisterBuildCallback(SetContainer);
             Configure(builder);
-
             foreach (var installer in localExtraInstallers)
             {
                 installer.Install(builder);
@@ -304,6 +301,7 @@ namespace VContainer.Unity
             }
 
             builder.RegisterInstance<LifetimeScope>(this).AsSelf();
+            builder.RegisterBuildCallback(AutoInjectAll);
             EntryPointsBuilder.EnsureDispatcherRegistered(builder);
         }
 
@@ -356,7 +354,7 @@ namespace VContainer.Unity
             return null;
         }
 
-        void AutoInjectAll()
+        void AutoInjectAll(IObjectResolver container)
         {
             if (autoInjectGameObjects == null)
                 return;
